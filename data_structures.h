@@ -35,15 +35,7 @@ typedef struct PCB
 typedef struct msgbuff
 {
     long mtype;
-    int id;
-    int pid;
-    int priority;
-    int arrival_time;
-    int running_time;
-    int waiting_time;
-    int remaining_time;
-    int finish_time;
-    ProcessState state;
+    PCB Process;
 } msgbuff;
 
 //--------------------------------------------------Priority Queue--------------------------------------------------

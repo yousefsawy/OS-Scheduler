@@ -160,32 +160,9 @@ int main(int argc, char * argv[])
             if (processes[i].arrival_time == getClk())
             {
                 //sends this process to the scheduler's ready list
-                message.mtype = 1; // 1 --> Send to Scheduler; 2 --> Receive
-                message.id = ids[i];
-                message.arrival_time = arrivals[i];
-                message.running_time = runtimes[i];
-                message.priority = priorities[i];
-
-                message.pid = 0;
-                message.waiting_time = 0;
-                message.remaining_time = 0;
-                message.finish_time = 0;
-                message.state = READY;
+                message.Process = processes[i];
+                send_val = msgsnd(msgq_id, &message, sizeof(message.Process), !IPC_NOWAIT);
                 
-                processes[i].id = ids[i];
-                processes[i].arrival_time = arrivals[i];
-                processes[i].running_time = runtimes[i];
-                processes[i].priority = priorities[i];
-                //all other parameters are initialized with zero
-                processes[i].pid = 0;
-                processes[i].waiting_time = 0;
-                processes[i].remaining_time = 0;
-                processes[i].finish_time = 0;
-                processes[i].state = READY;
-
-
-                send_val = msgsnd(msgq_id, &message, sizeof(message), !IPC_NOWAIT);
-                rec_val = msgrcv(msgq_id, &message, sizeof(message), 2, !IPC_NOWAIT);
                 printf("process[%d] arrived at time %d\n", processes[i].id, getClk());
                 start = i;
             }
