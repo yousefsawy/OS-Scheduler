@@ -9,6 +9,14 @@ typedef enum
     TERMINATED
 } ProcessState;
 
+typedef enum 
+{
+    HPF,
+    SRTN,
+    RR
+} SchedulingALgo;
+
+
 // Process Control Block structure
 typedef struct PCB
 {

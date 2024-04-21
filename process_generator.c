@@ -95,7 +95,10 @@ int main(int argc, char * argv[])
         char prcs_count[10];
         sprintf(prcs_count, "%d", processes_count);
 
-        execl("./scheduler.out", "scheduler.out", prcs_count, NULL);
+        char shcd_algo[10];
+        sprintf(shcd_algo, "%d", algo);
+
+        execl("./scheduler.out", "scheduler.out", prcs_count, shcd_algo, NULL);
         //execl("./scheduler.out", "scheduler.out",NULL);
         perror("Error in excel of scheduler");
         return -1;
