@@ -83,29 +83,62 @@ int main(int argc, char * argv[])
         return -1;
     }
 
-    int scheduler_pid = fork(); //scheduler forking
-    if (scheduler_pid == -1)
-    {
-        perror("Error in forking of scheduler");
-        return -1;
-    }
-    else if (scheduler_pid == 0) //scheduler process
-    {
-        execl("./scheduler.out", "scheduler.out", NULL);
-        perror("Error in excel of scheduler");
-        return -1;
-    }
+    // int scheduler_pid = fork(); //scheduler forking
+    // if (scheduler_pid == -1)
+    // {
+    //     perror("Error in forking of scheduler");
+    //     return -1;
+    // }
+    // else if (scheduler_pid == 0) //scheduler process
+    // {
+    //     execl("./scheduler.out", "scheduler.out", NULL);
+    //     perror("Error in excel of scheduler");
+    //     return -1;
+    // }
 
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
-    sleep(1);
-    //sleep(1);
+
     // To get time use this
-    int x = getClk();
-    printf("current time is %d\n", x);
-    // TODO Generation Main Loop
+    //int x = getClk();
+    //printf("current time is %d\n", x);
+    
     // 5. Create a data structure for processes and provide it with its parameters.
+
+    PCB processes[processes_count];
+    for (int i = 0; i < processes_count; i++)
+    {
+        processes[i].id = ids[i];
+        processes[i].arrival_time = arrivals[i];
+        processes[i].running_time = runtimes[i];
+        processes[i].priority = priorities[i];
+        //all other parameters are initialized with zero
+        processes[i].pid = 0;
+        processes[i].waiting_time = 0;
+        processes[i].remaining_time = 0;
+        processes[i].finish_time = 0;
+        processes[i].state = READY;
+    }
+
+    // TODO Generation Main Loop
+
     // 6. Send the information to the scheduler at the appropriate time.
+
+    int start = 0;
+    while (true)
+    {
+        for (int i = start; i < processes_count; i++)
+        {
+            if (processes[i].arrival_time == getClk())
+            {
+                //needs a function that sends this process to the scheduler's ready list
+                printf("process[%d] arrived at time %d\n", processes[i].id, getClk());
+                start = i;
+            }
+        }
+        sleep(1);
+    }
+
     // 7. Clear clock resources
     destroyClk(true);
 }

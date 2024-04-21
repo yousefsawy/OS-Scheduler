@@ -54,7 +54,7 @@ int isEmpty(PriorityQueue *pq)
 // Function to insert a process into the priority queue based on its priority
 void enqueue(PriorityQueue *pq, PCB process, int priority)
 {
-    PQ_Node *newNode = malloc(sizeof(PQ_Node));
+    PQ_Node *newNode = (PQ_Node *)malloc(sizeof(PQ_Node));
     newNode->process = process;
     newNode->priority = priority;
     newNode->next = NULL;
