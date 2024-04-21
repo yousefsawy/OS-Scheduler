@@ -6,7 +6,7 @@ int remainingtime;
 int main(int agrc, char * argv[])
 {
     initClk();
-    remainingtime = atoi(1);
+    remainingtime = atoi(argv[1]);
     //TODO it needs to get the remaining time from somewhere
     //remainingtime = ??;
     printf("Remaining time: %d", remainingtime);
