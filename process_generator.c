@@ -17,13 +17,14 @@ int main(int argc, char * argv[])
         return -1;
     }
     char c;
-    int processes_count; //number of processes
+    int processes_count = 0; //number of processes
     while ((c = fgetc(file)) != EOF)
     {
         if (c == '\n')
             processes_count++;
     }
-    processes_count--;
+    //processes_count--;
+    //printf(" pcount %d", processes_count);
     fclose(file);
     int ids[processes_count]; //array of ids
     int arrivals[processes_count]; //array of arrival times
@@ -83,18 +84,22 @@ int main(int argc, char * argv[])
         return -1;
     }
 
-    // int scheduler_pid = fork(); //scheduler forking
-    // if (scheduler_pid == -1)
-    // {
-    //     perror("Error in forking of scheduler");
-    //     return -1;
-    // }
-    // else if (scheduler_pid == 0) //scheduler process
-    // {
-    //     execl("./scheduler.out", "scheduler.out", NULL);
-    //     perror("Error in excel of scheduler");
-    //     return -1;
-    // }
+    int scheduler_pid = fork(); //scheduler forking
+    if (scheduler_pid == -1)
+    {
+        perror("Error in forking of scheduler");
+        return -1;
+    }
+    else if (scheduler_pid == 0) //scheduler process
+    {
+        char prcs_count[10];
+        sprintf(prcs_count, "%d", processes_count);
+
+        execl("./scheduler.out", "scheduler.out", prcs_count, NULL);
+        //execl("./scheduler.out", "scheduler.out",NULL);
+        perror("Error in excel of scheduler");
+        return -1;
+    }
 
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
@@ -103,6 +108,26 @@ int main(int argc, char * argv[])
     //int x = getClk();
     //printf("current time is %d\n", x);
     
+    //Creating IPC to Send to Scheduler
+    key_t key_id;
+    int rec_val, send_val;
+
+    key_id = ftok("processes.txt", 65);               //create unique key
+    int msgq_id = msgget(key_id, 0666 | IPC_CREAT); //create message queue and return id
+
+    if (msgq_id == -1)
+    {
+        perror("Error in create");
+        exit(-1);
+    }
+    printf("Message Queue ID = %d\n", msgq_id);
+
+    struct msgbuff message;
+
+
+    if (send_val == -1)
+            perror("Error in send Process Generator");
+
     // 5. Create a data structure for processes and provide it with its parameters.
 
     PCB processes[processes_count];
@@ -131,7 +156,33 @@ int main(int argc, char * argv[])
         {
             if (processes[i].arrival_time == getClk())
             {
-                //needs a function that sends this process to the scheduler's ready list
+                //sends this process to the scheduler's ready list
+                message.mtype = 1; // 1 --> Send to Scheduler; 2 --> Receive
+                message.id = ids[i];
+                message.arrival_time = arrivals[i];
+                message.running_time = runtimes[i];
+                message.priority = priorities[i];
+
+                message.pid = 0;
+                message.waiting_time = 0;
+                message.remaining_time = 0;
+                message.finish_time = 0;
+                message.state = READY;
+                
+                processes[i].id = ids[i];
+                processes[i].arrival_time = arrivals[i];
+                processes[i].running_time = runtimes[i];
+                processes[i].priority = priorities[i];
+                //all other parameters are initialized with zero
+                processes[i].pid = 0;
+                processes[i].waiting_time = 0;
+                processes[i].remaining_time = 0;
+                processes[i].finish_time = 0;
+                processes[i].state = READY;
+
+
+                send_val = msgsnd(msgq_id, &message, sizeof(message), !IPC_NOWAIT);
+                rec_val = msgrcv(msgq_id, &message, sizeof(message), 2, !IPC_NOWAIT);
                 printf("process[%d] arrived at time %d\n", processes[i].id, getClk());
                 start = i;
             }

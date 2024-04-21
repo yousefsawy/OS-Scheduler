@@ -23,6 +23,21 @@ typedef struct PCB
     ProcessState state;
 } PCB;
 
+//Message Buffer between Process_Generator and Scheduler
+typedef struct msgbuff
+{
+    long mtype;
+    int id;
+    int pid;
+    int priority;
+    int arrival_time;
+    int running_time;
+    int waiting_time;
+    int remaining_time;
+    int finish_time;
+    ProcessState state;
+} msgbuff;
+
 //--------------------------------------------------Priority Queue--------------------------------------------------
 
 // Node structure for the priority queue
