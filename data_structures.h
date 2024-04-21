@@ -9,14 +9,6 @@ typedef enum
     TERMINATED
 } ProcessState;
 
-typedef enum 
-{
-    HPF,
-    SRTN,
-    RR
-} SchedulingALgo;
-
-
 // Process Control Block structure
 typedef struct PCB
 {
@@ -30,13 +22,6 @@ typedef struct PCB
     int finish_time;
     ProcessState state;
 } PCB;
-
-//Message Buffer between Process_Generator and Scheduler
-typedef struct msgbuff
-{
-    long mtype;
-    PCB Process;
-} msgbuff;
 
 //--------------------------------------------------Priority Queue--------------------------------------------------
 
