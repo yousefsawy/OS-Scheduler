@@ -17,14 +17,13 @@ int main(int argc, char * argv[])
         return -1;
     }
     char c;
-    int processes_count = 0; //number of processes
+    int processes_count; //number of processes
     while ((c = fgetc(file)) != EOF)
     {
         if (c == '\n')
             processes_count++;
     }
-    //processes_count--;
-    //printf(" pcount %d", processes_count);
+    processes_count--;
     fclose(file);
     int ids[processes_count]; //array of ids
     int arrivals[processes_count]; //array of arrival times
@@ -69,6 +68,12 @@ int main(int argc, char * argv[])
         }
     }
 
+    //Converting the file parameters into strings
+    char pcount[5], s_algo[5], s_quantum[5];
+    sprintf(pcount, "%d", processes_count);
+    sprintf(s_algo, "%d", algo);
+    sprintf(s_quantum, "%d", quantum);
+
     // 3. Initiate and create the scheduler and clock processes.
 
     int clk_pid = fork(); //clock forking
@@ -92,14 +97,7 @@ int main(int argc, char * argv[])
     }
     else if (scheduler_pid == 0) //scheduler process
     {
-        char prcs_count[10];
-        sprintf(prcs_count, "%d", processes_count);
-
-        char shcd_algo[10];
-        sprintf(shcd_algo, "%d", algo);
-
-        execl("./scheduler.out", "scheduler.out", prcs_count, shcd_algo, NULL);
-        //execl("./scheduler.out", "scheduler.out",NULL);
+        execl("./scheduler.out", "scheduler.out", pcount, s_algo, s_quantum, NULL);
         perror("Error in excel of scheduler");
         return -1;
     }
@@ -110,26 +108,6 @@ int main(int argc, char * argv[])
     // To get time use this
     //int x = getClk();
     //printf("current time is %d\n", x);
-    
-    //Creating IPC to Send to Scheduler
-    key_t key_id;
-    int rec_val, send_val;
-
-    key_id = ftok("processes.txt", 65);               //create unique key
-    int msgq_id = msgget(key_id, 0666 | IPC_CREAT); //create message queue and return id
-
-    if (msgq_id == -1)
-    {
-        perror("Error in create");
-        exit(-1);
-    }
-    printf("Message Queue ID = %d\n", msgq_id);
-
-    struct msgbuff message;
-
-
-    if (send_val == -1)
-            perror("Error in send Process Generator");
 
     // 5. Create a data structure for processes and provide it with its parameters.
 
@@ -150,6 +128,17 @@ int main(int argc, char * argv[])
 
     // TODO Generation Main Loop
 
+    //Initiating Message Queue
+
+    key_t key_pg_s = ftok("keyfile", 1);
+    int pg_s_id = msgget(key_pg_s, IPC_CREAT | 0666);
+    if (pg_s_id == -1)
+    {
+        perror("Error in creating pg_s msg queue");
+        return -1;
+    }
+    printf("PGenerator-Scheduler Message Queue ID = %d\n", pg_s_id);
+
     // 6. Send the information to the scheduler at the appropriate time.
 
     int start = 0;
@@ -159,12 +148,12 @@ int main(int argc, char * argv[])
         {
             if (processes[i].arrival_time == getClk())
             {
-                //sends this process to the scheduler's ready list
-                message.Process = processes[i];
-                message.mtype = 1;
-                send_val = msgsnd(msgq_id, &message, sizeof(message.Process), !IPC_NOWAIT);
-
-                printf("process[%d] arrived at time %d\n", processes[i].id, getClk());
+                int send_val = msgsnd(pg_s_id, &processes[i], sizeof(processes[i]), !IPC_NOWAIT);
+                if (send_val == -1)
+                {
+                    perror("Error in sending pg_s");
+                    return -1;
+                }
                 start = i;
             }
         }
