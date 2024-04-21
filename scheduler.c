@@ -33,34 +33,25 @@ int main(int argc, char * argv[])
     int i = 0;
     while(processes_done < process_Count)
     {
-        rec_val = msgrcv(msgq_id, &message, sizeof(message), 1, !IPC_NOWAIT);
+        rec_val = msgrcv(msgq_id, &message, sizeof(message.Process), 1, !IPC_NOWAIT);
 
 
             if (rec_val == -1)
                 perror("Error in receive scheduler");
             else
                 {
-                    printf("\nMessage received: %d %d %d %d %d %d %d %d %d\n", message.id, message.arrival_time, message.running_time, message.priority, message.pid, message.waiting_time,
-                    message.remaining_time,
-                    message.finish_time,
-                    message.state);
+                    printf("\nMessage received: %d %d %d %d %d %d %d %d %d\n", message.Process.id, message.Process.arrival_time, message.Process.running_time, message.Process.priority, message.Process.pid, message.Process.waiting_time,
+                    message.Process.remaining_time,
+                    message.Process.finish_time,
+                    message.Process.state);
 
                             //Initalize the PCB
-                            Processes[i].id = message.id;
-                            Processes[i].arrival_time = message.arrival_time;
-                            Processes[i].running_time = message.running_time;
-                            Processes[i].priority = message.priority;
-                            
-                            Processes[i].pid = message.pid;
-                            Processes[i].waiting_time = message.waiting_time;
-                            Processes[i].remaining_time = message.running_time;
-                            Processes[i].finish_time = message.finish_time;
-                            Processes[i].state = message.state;
+                            Processes[i]= message.Process;
                 }
-        message.mtype = 2;
-        send_val = msgsnd(msgq_id, &message, sizeof(message), !IPC_NOWAIT);
         processes_done++;
     }
+
+    
     //delete the message queue:
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
     printf("Message Queue terminated\n");
