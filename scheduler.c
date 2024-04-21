@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
     struct msgbuff message;
 
     int i = 0;
-    while(processes_done < process_Count)
+    while(1)
     {
         rec_val = msgrcv(msgq_id, &message, sizeof(message.Process), 1, !IPC_NOWAIT);
 
@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
         processes_done++;
     }
 
-    
+
     //delete the message queue:
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
     printf("Message Queue terminated\n");

@@ -161,8 +161,9 @@ int main(int argc, char * argv[])
             {
                 //sends this process to the scheduler's ready list
                 message.Process = processes[i];
+                message.mtype = 1;
                 send_val = msgsnd(msgq_id, &message, sizeof(message.Process), !IPC_NOWAIT);
-                
+
                 printf("process[%d] arrived at time %d\n", processes[i].id, getClk());
                 start = i;
             }
