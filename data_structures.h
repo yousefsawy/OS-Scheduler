@@ -12,6 +12,7 @@ typedef enum
 // Process Control Block structure
 typedef struct PCB
 {
+    int id;
     int pid;
     int priority;
     int arrival_time;
@@ -100,6 +101,6 @@ void destroyPriorityQueue(PriorityQueue *pq)
 // -----Test-----
 // PriorityQueue pq;
 // initPriorityQueue(&pq);
-// PCB process1 = {1, 2, 0, 0, 0, 10, 0, READY};
+// PCB process1 = {1, 1562, 2, 0, 0, 0, 10, 0, READY};
 // enqueue(&pq, process1, process1.priority);
 // dequeue(&pq)
