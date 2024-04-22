@@ -200,6 +200,27 @@ void deleteNode_CircularQueue(CircularQueue *queue, int PID)
     } while (current != queue->front);
 }
 
+// Function to dequeue the front node from the circular queue
+PCB dequeue_CircularQueue(CircularQueue *queue)
+{
+    CQ_Node *temp = queue->front;
+    PCB process = temp->process;
+
+    if (queue->front == queue->rear)
+    {
+        // If there is only one node in the queue
+        queue->front = queue->rear = NULL;
+    }
+    else
+    {
+        queue->front = queue->front->next;
+        queue->rear->next = queue->front;
+    }
+
+    free(temp);
+    return process;
+}
+
 // Function to destroy the circular queue and free memory
 void destroy_CircularQueue(CircularQueue *queue)
 {
