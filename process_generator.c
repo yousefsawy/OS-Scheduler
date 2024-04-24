@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
         processes[i].waiting_time = 0;
         processes[i].remaining_time = 0;
         processes[i].finish_time = 0;
-        processes[i].state = READY;
+        processes[i].state = UNKNOWN;
     }
 
     // TODO Generation Main Loop
@@ -145,7 +145,7 @@ int main(int argc, char * argv[])
     msgbuff message;
     message.mtype = getpid();
     int start = 0;
-    while (true)
+    while (start != processes_count)
     {
         for (int i = start; i < processes_count; i++)
         {
@@ -161,8 +161,9 @@ int main(int argc, char * argv[])
                 start = i + 1;
             }
         }
-        sleep(1);
     }
+
+    while(true) {} //busy wait
 
     // 7. Clear clock resources
     destroyClk(true);
