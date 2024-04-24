@@ -2,9 +2,11 @@
 
 void clearResources(int);
 
+int pg_s_id;
+
 int main(int argc, char * argv[])
 {
-    //signal(SIGINT, clearResources);
+    signal(SIGINT, clearResources);
 
     // TODO Initialization
 
@@ -131,7 +133,7 @@ int main(int argc, char * argv[])
     //Initiating Message Queue
 
     key_t key_pg_s = ftok("keyfile", 1);
-    int pg_s_id = msgget(key_pg_s, IPC_CREAT | 0666);
+    pg_s_id = msgget(key_pg_s, IPC_CREAT | 0666);
     if (pg_s_id == -1)
     {
         perror("Error in creating pg_s msg queue");
@@ -167,4 +169,5 @@ int main(int argc, char * argv[])
 void clearResources(int signum)
 {
     //TODO Clears all resources in case of interruption
+    msgctl(pg_s_id, IPC_RMID, NULL);
 }
