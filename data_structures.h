@@ -5,7 +5,8 @@ typedef enum ProcessState
 {
     READY,
     RUNNING,
-    TERMINATED
+    TERMINATED,
+    UNKNOWN
 } ProcessState;
 
 // Process Control Block structure
