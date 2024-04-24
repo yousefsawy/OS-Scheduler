@@ -1,6 +1,6 @@
 #include "headers.h"
 
-bool p_terminated = false;
+bool p_terminated = false; //flag for indicating that a process terminated in current timestep
 
 void handler();
 
@@ -48,10 +48,13 @@ int main(int argc, char * argv[])
 
     //TODO implement the scheduler :)
 
-    int time = getClk();
-    int queue_size = 0;
-    int terminate_count = 0;
-    bool update = true;
+    /////////////////////// flags and counters for sync /////////////////////
+    int time = getClk();                                                   //
+    int queue_size = 0;                                                    //
+    int terminate_count = 0;                                               // add more if needed
+    bool update = true;                                                    //
+    bool CPU_available = true;                                             //
+    /////////////////////////////////////////////////////////////////////////
     while(true)
     {
         //receiving from pg
@@ -68,63 +71,82 @@ int main(int argc, char * argv[])
         }
         else
         {
-            printf("process[%d] arrived at time %d\n", message.process.id, getClk());
+            printf("process[%d] arrived\n", message.process.id);
             message.process.state = READY;
             processes[message.process.id - 1] = message.process;
-            enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
-            queue_size ++;
+            if (algo == 1) //HPF
+            {
+                enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
+                queue_size ++;
+            }
             continue;
         }
 
-        //hpf scheduling
+        if (update)
+        {
+            printf("current time is [%d]\n", getClk());
+        }
 
-    //     if (p_terminated)
-    //     {
-    //         processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
-    //         processes[terminate_count].finish_time = getClk();
-    //         processes[terminate_count].state = TERMINATED;
-    //         terminate_count ++;
-    //         p_terminated = false;
-    //         if (isEmpty_PriorityQueue(&HPF_queue)) {break;}
-    //     }
-    //     if (HPF_queue.head->process.state != RUNNING)
-    //     {
-    //         HPF_queue.head->process.state = RUNNING;
-    //         HPF_queue.head->process.start_time = getClk();
-    //         char s_running_time[5], s_id[5];
-    //         sprintf(s_running_time, "%d", HPF_queue.head->process.running_time);
-    //         sprintf(s_id, "%d", HPF_queue.head->process.id);
-    //         int pid = fork();
-    //         if (pid == -1)
-    //         {
-    //             perror("Error in fork");
-    //             return -1;
-    //         }
-    //         else if (pid == 0)
-    //         {
-    //             execl("./process.out", "process.out", s_running_time, s_id, NULL);
-    //         }
-    //         else
-    //         {
-    //             HPF_queue.head->process.pid = pid;
-    //         }
-    //     }
-    //     if (update) //update PCB
-    //     {
-    //         for (int i = 0; i < queue_size; i++)
-    //         {
-    //             if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
-    //             else if (processes[i].state == READY) {processes[i].waiting_time ++;}
-    //         }
+        usleep(200000); //sleeps for 0.2 seconds
 
-    //         update = false;
-    //         printf("current time is %d\n", getClk());
-    //     }
-    //     if (time != getClk())
-    //     {
-    //         update = true;
-    //         time = getClk();
-    //     }
+        if (algo == 1) //HPF
+        {
+            if (update && p_terminated) //at first check if a process terminated
+            {
+                processes[terminate_count].finish_time = getClk();
+                processes[terminate_count].state = TERMINATED;
+                terminate_count ++;
+                p_terminated = false;
+                CPU_available = true;
+                if (isEmpty_PriorityQueue(&HPF_queue)) {break;}
+            }
+            if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) //then check if there are no processes running
+            {
+                HPF_queue.head->process.state = RUNNING;
+                HPF_queue.head->process.start_time = getClk();
+                char s_running_time[5], s_id[5];
+                sprintf(s_running_time, "%d", HPF_queue.head->process.running_time);
+                sprintf(s_id, "%d", HPF_queue.head->process.id);
+                int pid = fork();
+                if (pid == -1)
+                {
+                    perror("Error in fork");
+                    return -1;
+                }
+                else if (pid == 0)
+                {
+                    execl("./process.out", "process.out", s_running_time, s_id, NULL);
+                }
+                else
+                {
+                    HPF_queue.head->process.pid = pid;
+                    processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
+                    CPU_available = false;
+                }
+            }
+        }
+
+        usleep(200000); //sleeps for 0.2 seconds
+
+        //update PCB blocks
+        if (update)
+        {
+            for (int i = 0; i < queue_size; i++)
+            {
+                if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
+                else if (processes[i].state == READY) {processes[i].waiting_time ++;}
+            }
+
+            printf("============================\n");
+            update = false;
+        }
+
+        //handles the update flag in order to control operations which are done only once every timestep
+        if (time != getClk())
+        {
+            update = true;
+            time = getClk();
+        }
      }
 
     destroy_PriorityQueue(&HPF_queue);

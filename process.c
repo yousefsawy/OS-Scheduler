@@ -8,9 +8,13 @@ int main(int agrc, char * argv[])
     initClk();
 
     //TODO it needs to get the remaining time from somewhere
+    
     remainingtime = atoi(argv[1]);
+    int process_id = atoi(argv[2]);
+
+    printf("process [%d] starting at time [%d]\n", process_id, getClk()); //starting ack
+
     int time = getClk();
-    printf("process %d starting at time %d\n", atoi(argv[2]), getClk());
     while (remainingtime > 0)
     {
         if (time != getClk())
@@ -20,9 +24,9 @@ int main(int agrc, char * argv[])
         }
     }
 
-    kill(getppid(), SIGCHLD);
+    kill(getppid(), SIGCHLD); //sends termination signal to scheduler in order to handle it
 
-    printf("process %d terminating at time %d\n", atoi(argv[2]), getClk());
+    printf("process [%d] terminating at time [%d]\n", process_id, getClk()); //terminating ack
 
     destroyClk(false);
 
