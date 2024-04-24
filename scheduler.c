@@ -9,7 +9,6 @@ int main(int argc, char * argv[])
     int processes_count = atoi(argv[1]);
     int algo = atoi(argv[2]);
     int quantum = atoi(argv[3]);
-    PCB process;
 
     //Initiating Message Queue
 
@@ -22,9 +21,11 @@ int main(int argc, char * argv[])
     }
     printf("PGenerator-Scheduler Message Queue ID = %d\n", pg_s_id);
 
-    while(true)
+    msgbuff message;
+    message.mtype = getppid();
+    while(processes_count != 0)
     {
-        int rec_val = msgrcv(pg_s_id, &process, sizeof(process), 0, !IPC_NOWAIT);
+        int rec_val = msgrcv(pg_s_id, &message, sizeof(message.process), message.mtype, !IPC_NOWAIT);
         if (rec_val == -1)
         {
             perror("Error in receiving pg_s");
@@ -32,12 +33,14 @@ int main(int argc, char * argv[])
         }
         else
         {
-            printf("process[%d] arrived at time %d\n", process.id, getClk());
+            printf("process[%d] arrived at time %d\n", message.process.id, getClk());
+            processes_count --;
+            if (!processes_count) {destroyClk(true);}
         }
     }
 
     //TODO implement the scheduler :)
     //upon termination release the clock resources.
 
-    destroyClk(true);
+    //destroyClk(true);
 }

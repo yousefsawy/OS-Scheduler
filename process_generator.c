@@ -143,6 +143,8 @@ int main(int argc, char * argv[])
 
     // 6. Send the information to the scheduler at the appropriate time.
 
+    msgbuff message;
+    message.mtype = getpid();
     int start = 0;
     while (true)
     {
@@ -150,13 +152,14 @@ int main(int argc, char * argv[])
         {
             if (processes[i].arrival_time == getClk())
             {
-                int send_val = msgsnd(pg_s_id, &processes[i], sizeof(processes[i]), !IPC_NOWAIT);
+                message.process = processes[i];
+                int send_val = msgsnd(pg_s_id, &message, sizeof(message.process), !IPC_NOWAIT);
                 if (send_val == -1)
                 {
                     perror("Error in sending pg_s");
                     return -1;
                 }
-                start = i;
+                start = i + 1;
             }
         }
         sleep(1);
@@ -170,4 +173,6 @@ void clearResources(int signum)
 {
     //TODO Clears all resources in case of interruption
     msgctl(pg_s_id, IPC_RMID, NULL);
+    printf("IPC instances are destroyed\n");
+    exit(0);
 }
