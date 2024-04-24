@@ -19,7 +19,6 @@ int main(int argc, char * argv[])
         perror("Error in creating pg_s msg queue");
         return -1;
     }
-    printf("PGenerator-Scheduler Message Queue ID = %d\n", pg_s_id);
 
     msgbuff message;
     message.mtype = getppid();
