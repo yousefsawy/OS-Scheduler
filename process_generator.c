@@ -144,26 +144,27 @@ int main(int argc, char * argv[])
 
     msgbuff message;
     message.mtype = getpid();
-    int start = 0;
-    while (start != processes_count)
+    int i = 0;
+    while (i < processes_count)
     {
-        for (int i = start; i < processes_count; i++)
+        if (processes[i].arrival_time == getClk())
         {
-            if (processes[i].arrival_time == getClk())
+            message.process = processes[i];
+            int send_val = msgsnd(pg_s_id, &message, sizeof(message.process), !IPC_NOWAIT);
+            if (send_val == -1)
             {
-                message.process = processes[i];
-                int send_val = msgsnd(pg_s_id, &message, sizeof(message.process), !IPC_NOWAIT);
-                if (send_val == -1)
-                {
-                    perror("Error in sending pg_s");
-                    return -1;
-                }
-                start = i + 1;
+                perror("Error in sending pg_s");
+                return -1;
+            }
+            else
+            {
+                printf("sending\n");
+                i ++;
             }
         }
     }
 
-    while(true) {} //busy wait
+    while(true) {printf("hi");} //busy wait
 
     // 7. Clear clock resources
     destroyClk(true);
