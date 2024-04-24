@@ -23,6 +23,13 @@ typedef struct PCB
     ProcessState state;
 } PCB;
 
+//Message buffer
+typedef struct msgbuff
+{
+    long mtype;
+    PCB process;
+} msgbuff;
+
 //--------------------------------------------------Priority Queue--------------------------------------------------
 
 // Node structure for the priority queue
