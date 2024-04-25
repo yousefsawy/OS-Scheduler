@@ -46,6 +46,29 @@ int main(int argc, char * argv[])
         return -1;
     }
 
+    //Initiating 2 Semaphores for process synch
+    key_t key_id1, key_id2;
+    union Semun semun;
+
+    key_id1 = ftok("keyfile", 65);
+    key_id2 = ftok("keyfile", 64);
+
+    int sem1 = semget(key_id1, 1, 0666 | IPC_CREAT); //SEM 1 -> For client write
+    int sem2 = semget(key_id2, 1, 0666 | IPC_CREAT); //SEM 2 -> For Server Read
+
+    semun.val = 1;
+    if (semctl(sem1, 0, SETVAL, semun) == -1)
+    {
+        perror("Error in semctl");
+        exit(-1);
+    }
+
+    if (semctl(sem2, 0, SETVAL, semun) == -1)
+    {
+        perror("Error in semctl");
+        exit(-1);
+    }
+
     //TODO implement the scheduler :)
 
     /////////////////////// flags and counters for sync /////////////////////
@@ -73,12 +96,30 @@ int main(int argc, char * argv[])
         {
             printf("process[%d] arrived\n", message.process.id);
             message.process.state = READY;
-            processes[message.process.id - 1] = message.process;
+            processes[message.process.id - 1] = message.process; //TO BE DELETED
             if (algo == 1) //HPF
             {
                 enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
                 queue_size ++;
             }
+
+            //For & make sure process is Stopped before continuing code
+            char s_running_time[5], s_id[5];
+            sprintf(s_running_time, "%d", HPF_queue.head->process.running_time);
+            sprintf(s_id, "%d", HPF_queue.head->process.id);
+            int pid = fork();
+            if (pid == -1)
+            {
+                perror("Error in fork");
+                return -1;
+            }
+            else if (pid == 0)
+            {
+                execl("./process.out", "process.out", s_running_time, s_id, NULL);
+            }
+            kill(pid,SIGSTOP);
+            processes[message.process.id - 1].pid = pid;
+
             continue;
         }
 
@@ -98,33 +139,21 @@ int main(int argc, char * argv[])
                 terminate_count ++;
                 p_terminated = false;
                 CPU_available = true;
-                if (isEmpty_PriorityQueue(&HPF_queue)) {break;}
+                if (terminate_count == processes_count) {break;}
             }
             if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) //then check if there are no processes running
             {
                 HPF_queue.head->process.state = RUNNING;
                 HPF_queue.head->process.start_time = getClk();
-                char s_running_time[5], s_id[5];
-                sprintf(s_running_time, "%d", HPF_queue.head->process.running_time);
-                sprintf(s_id, "%d", HPF_queue.head->process.id);
-                int pid = fork();
-                if (pid == -1)
-                {
-                    perror("Error in fork");
-                    return -1;
-                }
-                else if (pid == 0)
-                {
-                    execl("./process.out", "process.out", s_running_time, s_id, NULL);
-                }
-                else
-                {
-                    HPF_queue.head->process.pid = pid;
-                    processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
-                    CPU_available = false;
-                }
+                processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
+                CPU_available = false;
             }
         }
+        
+        if(algo == 2) //SRTN
+        {
+            
+        } 
 
         usleep(200000); //sleeps for 0.2 seconds
 
