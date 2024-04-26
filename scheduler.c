@@ -1,8 +1,9 @@
 #include "headers.h"
 
 bool p_terminated = false; //flag for indicating that a process terminated in current timestep
-
+int p_terminated_id = -1;
 void handler();
+int ShortestRemaining(PCB* Processes, int count);
 
 int main(int argc, char * argv[])
 {
@@ -77,6 +78,8 @@ int main(int argc, char * argv[])
     int terminate_count = 0;                                               // add more if needed
     bool update = true;                                                    //
     bool CPU_available = true;                                             //
+    int Process_arrived = 0;                                               //
+    int running_pid = -1;                                                  //
     /////////////////////////////////////////////////////////////////////////
     while(true)
     {
@@ -95,8 +98,9 @@ int main(int argc, char * argv[])
         else
         {
             printf("process[%d] arrived\n", message.process.id);
+            Process_arrived++;
             message.process.state = READY;
-            processes[message.process.id - 1] = message.process; //TO BE DELETED
+            processes[message.process.id - 1] = message.process;
             if (algo == 1) //HPF
             {
                 enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
@@ -105,8 +109,8 @@ int main(int argc, char * argv[])
 
             //For & make sure process is Stopped before continuing code
             char s_running_time[5], s_id[5];
-            sprintf(s_running_time, "%d", HPF_queue.head->process.running_time);
-            sprintf(s_id, "%d", HPF_queue.head->process.id);
+            sprintf(s_running_time, "%d", message.process.running_time);
+            sprintf(s_id, "%d", message.process.id);
             int pid = fork();
             if (pid == -1)
             {
@@ -119,7 +123,6 @@ int main(int argc, char * argv[])
             }
             kill(pid,SIGSTOP);
             processes[message.process.id - 1].pid = pid;
-
             continue;
         }
 
@@ -153,15 +156,37 @@ int main(int argc, char * argv[])
         
         if(algo == 2) //SRTN
         {
-            
+            if (update && p_terminated) //at first check if a process terminated
+            {
+                processes[p_terminated_id-1].finish_time = getClk();
+                processes[p_terminated_id-1].state = TERMINATED;
+                terminate_count ++;
+                p_terminated = false;
+                running_pid = -1;
+                if (terminate_count == processes_count) {break;}
+            }
+            if(update)
+            {
+                if(running_pid != -1)
+                {
+                    kill(running_pid, SIGSTOP);
+                }
+
+
+                running_pid = ShortestRemaining(processes, Process_arrived);
+
+                if(running_pid != -1)
+                {
+                    kill(running_pid, SIGCONT);
+                }
+            }
         } 
 
         usleep(200000); //sleeps for 0.2 seconds
-
         //update PCB blocks
         if (update)
         {
-            for (int i = 0; i < queue_size; i++)
+            for (int i = 0; i < processes_count; i++)
             {
                 if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
                 else if (processes[i].state == READY) {processes[i].waiting_time ++;}
@@ -187,6 +212,29 @@ int main(int argc, char * argv[])
 }
 
 void handler()
-{
+{  
+    wait(&p_terminated_id);
+    p_terminated_id = WEXITSTATUS(p_terminated_id);
     p_terminated = true;
+
+    //signal(SIGUSR1, handler);
+}
+
+
+int ShortestRemaining(PCB* Processes, int count)
+{
+    int shortest = INT_MAX;
+    int pid = -1;
+    for(int i = 0; i < count; i++)
+    {
+        if (Processes[i].state == READY || Processes[i].state == RUNNING)
+        {
+            if(Processes[i].remaining_time < shortest)
+            {
+                pid = Processes[i].pid;
+                shortest = Processes[i].remaining_time;
+            }
+        }
+    }
+    return pid;
 }

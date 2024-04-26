@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#define INT_MAX 2147483647
+
 // Process states
 typedef enum ProcessState
 {

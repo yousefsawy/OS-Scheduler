@@ -123,7 +123,7 @@ int main(int argc, char * argv[])
         //all other parameters are initialized with zero
         processes[i].pid = 0;
         processes[i].waiting_time = 0;
-        processes[i].remaining_time = 0;
+        processes[i].remaining_time = runtimes[i];
         processes[i].finish_time = 0;
         processes[i].state = UNKNOWN;
     }

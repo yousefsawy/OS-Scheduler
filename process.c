@@ -59,11 +59,17 @@ int main(int agrc, char * argv[])
     printf("process [%d] terminating at time [%d]\n", process_id, getClk()); //terminating ack
 
     destroyClk(false);
+    exit(process_id);
 
     return 0;
 }
 
-//Fork Process 
-//Add semaphore to make sure process raises SIGSTOP first, Sem1 Process(UP),Sem1 Scheduler(Down) 
-//TO run process -> SIGCONT
-//Add semaphore to decrement the remaining time inside running process before removing from run
+void handler1()
+{
+    printf("Process is Stopped");
+}
+
+void handler2()
+{
+    printf("Process is continued");
+}
