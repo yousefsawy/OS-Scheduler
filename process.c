@@ -34,7 +34,8 @@ int main(int agrc, char * argv[])
     
     remainingtime = atoi(argv[1]);
     int process_id = atoi(argv[2]);
-    
+
+
     //SIGSTOP Process when first forked to move to RDY Queue
 
 
@@ -44,6 +45,7 @@ int main(int agrc, char * argv[])
     printf("process [%d] starting at time [%d]\n", process_id, getClk()); //starting ack
 
     int time = getClk();
+
     while (remainingtime > 0)
     {
         if (time != getClk())
@@ -52,8 +54,7 @@ int main(int agrc, char * argv[])
             time = getClk();
         }
     }
-
-    kill(getppid(), SIGCHLD); //sends termination signal to scheduler in order to handle it
+    kill(getppid(), SIGUSR1); //sends termination signal to scheduler in order to handle it
 
     printf("process [%d] terminating at time [%d]\n", process_id, getClk()); //terminating ack
 

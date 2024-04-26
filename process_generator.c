@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
         }
     }
 
-    while(true) {printf("hi");} //busy wait
+    while(true) {} //busy wait
 
     // 7. Clear clock resources
     destroyClk(true);

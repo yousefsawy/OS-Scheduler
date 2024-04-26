@@ -8,7 +8,7 @@ int main(int argc, char * argv[])
 {
     initClk();
 
-    signal(SIGCHLD, handler);
+    signal(SIGUSR1, handler);
 
     //Reading file parameters
     int processes_count = atoi(argv[1]);
@@ -145,6 +145,7 @@ int main(int argc, char * argv[])
             {
                 HPF_queue.head->process.state = RUNNING;
                 HPF_queue.head->process.start_time = getClk();
+                kill(HPF_queue.head->process.pid, SIGCONT);
                 processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
                 CPU_available = false;
             }
