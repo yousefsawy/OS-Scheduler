@@ -183,7 +183,7 @@ int isEmpty_CircularQueue(CircularQueue *queue)
 }
 
 // Function to enqueue a node into the circular queue
-void enqueue(CircularQueue *queue, PCB process)
+void enqueue_CircularQueue(CircularQueue *queue, PCB process)
 {
     CQ_Node *newNode = (CQ_Node *)malloc(sizeof(CQ_Node));
     newNode->process = process;

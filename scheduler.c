@@ -37,6 +37,12 @@ int main(int argc, char * argv[])
     PriorityQueue HPF_queue;
     init_PriorityQueue(&HPF_queue);
 
+    // RR queue
+    CircularQueue RR_queue;
+    init_CircularQueue(&RR_queue);
+    CQ_Node *RR_current_process = NULL;
+    int RR_current_quantum = quantum;
+
     //Initiating Message Queue
 
     key_t key_pg_s = ftok("keyfile", 1);
@@ -104,7 +110,12 @@ int main(int argc, char * argv[])
             if (algo == 1) //HPF
             {
                 enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
-                queue_size ++;
+                queue_size++;
+            }
+            else if (algo == 3)
+            {
+                enqueue_CircularQueue(&RR_queue, message.process);
+                queue_size++;
             }
 
             //For & make sure process is Stopped before continuing code
@@ -122,6 +133,12 @@ int main(int argc, char * argv[])
                 execl("./process.out", "process.out", s_running_time, s_id, NULL);
             }
             kill(pid,SIGSTOP);
+
+            if (algo == 3)
+            {
+                RR_queue.rear->process.pid = pid;
+            }
+
             processes[message.process.id - 1].pid = pid;
             continue;
         }
@@ -144,6 +161,7 @@ int main(int argc, char * argv[])
                 CPU_available = true;
                 if (terminate_count == processes_count) {break;}
             }
+
             if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) //then check if there are no processes running
             {
                 HPF_queue.head->process.state = RUNNING;
@@ -153,8 +171,7 @@ int main(int argc, char * argv[])
                 CPU_available = false;
             }
         }
-        
-        if(algo == 2) //SRTN
+        else if(algo == 2) //SRTN
         {
             if (update && p_terminated) //at first check if a process terminated
             {
@@ -165,6 +182,7 @@ int main(int argc, char * argv[])
                 running_pid = -1;
                 if (terminate_count == processes_count) {break;}
             }
+
             if(update)
             {
                 if(running_pid != -1)
@@ -180,9 +198,68 @@ int main(int argc, char * argv[])
                     kill(running_pid, SIGCONT);
                 }
             }
-        } 
+        }
+        else if(algo == 3) //RR
+        {
+            if(update)
+            {
+                if(p_terminated)
+                {
+                    RR_current_process->process.finish_time = getClk();
+                    RR_current_process->process.state = TERMINATED;
+                    processes[terminate_count] = RR_current_process->process;
+                    terminate_count++;
+                    p_terminated = false;
+
+                    int terminatedPID = RR_current_process->process.pid;
+                    RR_current_process = RR_current_process->next;
+                    RR_current_quantum = quantum;
+                    deleteNode_CircularQueue(&RR_queue, terminatedPID);
+                    if (terminate_count == processes_count) {break;}
+                }
+
+                if(!isEmpty_CircularQueue(&RR_queue) && RR_current_process == NULL) // First process to run
+                {
+                    RR_current_process = RR_queue.front;
+                    RR_current_quantum = quantum - 1;
+                    RR_current_process->process.start_time = getClk();
+                    RR_current_process->process.state = RUNNING;
+                    kill(RR_current_process->process.pid, SIGCONT);
+                }
+                else if(RR_current_quantum == 0) // Process has finished its allowed time
+                {
+                    printf("SHOULD BE STOPED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                    RR_current_process->process.state = READY;
+                    kill(RR_current_process->process.pid, SIGSTOP);
+                    RR_current_process = RR_current_process->next;
+                    RR_current_process->process.state = RUNNING;
+                    RR_current_quantum = quantum - 1;
+                    if(RR_current_process->process.start_time == 0)
+                    {
+                        RR_current_process->process.start_time = getClk();
+                    }
+                    kill(RR_current_process->process.pid, SIGCONT);
+                }
+                else if(RR_current_process && RR_current_quantum == quantum) // process after terminated one
+                {
+                    RR_current_process->process.state = RUNNING;
+                    RR_current_quantum = quantum - 1;
+                    if(RR_current_process->process.start_time == 0)
+                    {
+                        RR_current_process->process.start_time = getClk();
+                    }
+                    kill(RR_current_process->process.pid, SIGCONT);
+                }
+                else if (RR_current_process) // Process hasn't finished its allowed time
+                {
+                    RR_current_quantum--;
+                }
+
+            }
+        }
 
         usleep(200000); //sleeps for 0.2 seconds
+
         //update PCB blocks
         if (update)
         {
