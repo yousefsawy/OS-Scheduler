@@ -86,7 +86,8 @@ int main(int argc, char * argv[])
     bool update = true;                                                    //
     bool CPU_available = true;                                             //
     int Process_arrived = 0;                                               //
-    int running_pid = -1;                                                  //
+    int running_pid = -1; 
+    int received = 0;                                                 //
     /////////////////////////////////////////////////////////////////////////
     while(true)
     {
@@ -104,6 +105,7 @@ int main(int argc, char * argv[])
         }
         else
         {
+            received = 1;
             printf("process[%d] arrived\n", message.process.id);
             Process_arrived++;
             message.process.state = READY;
@@ -147,7 +149,7 @@ int main(int argc, char * argv[])
             printf("current time is [%d]\n", getClk());
         }
 
-        //usleep(200000); //sleeps for 0.2 seconds
+        usleep(200000); //sleeps for 0.2 seconds
 
         if (algo == 1) //HPF
         {
@@ -186,7 +188,7 @@ int main(int argc, char * argv[])
             {
                 if(running_pid != -1)
                     kill(running_pid, SIGSTOP);
-
+            
                 running_pid = ShortestRemaining(processes, Process_arrived);
 
                 if(running_pid != -1)
@@ -197,7 +199,10 @@ int main(int argc, char * argv[])
         {
             if(update)
             {
-                RR_current_quantum--;
+                if(RR_current_process)
+                {
+                    RR_current_quantum--;
+                }
                 
                 if(p_terminated)
                 {
@@ -222,10 +227,10 @@ int main(int argc, char * argv[])
                     RR_current_process->process.state = RUNNING;
                     kill(RR_current_process->process.pid, SIGCONT);
                 }
-                else if(RR_current_quantum == 0) // Process has finished its allowed time
+                else if(RR_current_quantum == 0 && RR_queue.front != RR_queue.rear) // Process has finished its allowed time
                 {
                     RR_current_process->process.state = READY;
-                    kill(RR_current_process->process.pid, SIGUSR1);
+                    kill(RR_current_process->process.pid, SIGSTOP);
                     printf("Current id: %d\n", RR_current_process->process.id);
                     RR_current_process = RR_current_process->next;
                     printf("Current id2: %d\n", RR_current_process->process.id);
@@ -250,7 +255,7 @@ int main(int argc, char * argv[])
             }
         }
 
-        //usleep(200000); //sleeps for 0.2 seconds
+        usleep(200000); //sleeps for 0.2 seconds
 
         //update PCB blocks
         if (update)

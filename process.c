@@ -5,6 +5,7 @@ int remainingtime;
 void handler();
 int process_id;
 int time;
+int sem1, sem2;
 void handler2();
 
 int main(int agrc, char * argv[])
@@ -12,7 +13,6 @@ int main(int agrc, char * argv[])
     initClk();
     signal(SIGUSR1,handler);
     signal(SIGCONT,handler2);
-
     //Initiating 2 Semaphores for Scheduler Synchronization
     key_t key_id1, key_id2;
     union Semun semun;
@@ -20,8 +20,8 @@ int main(int agrc, char * argv[])
     key_id1 = ftok("keyfile", 65);
     key_id2 = ftok("keyfile", 64);
 
-    int sem1 = semget(key_id1, 1, 0666 | IPC_CREAT); //SEM 1 -> For Process Raise SIGSTOP
-    int sem2 = semget(key_id2, 1, 0666 | IPC_CREAT); //SEM 2 -> For Process Decrement Remaining Time
+    sem1 = semget(key_id1, 1, 0666 | IPC_CREAT); //SEM 1 -> For Process Raise SIGSTOP
+    sem2 = semget(key_id2, 1, 0666 | IPC_CREAT); //SEM 2 -> For Process Decrement Remaining Time
 
     semun.val = 1;
     if (semctl(sem1, 0, SETVAL, semun) == -1)
@@ -72,12 +72,15 @@ int main(int agrc, char * argv[])
 
 
 void handler()
-{  
-    printf("process %d stoped at time %d\n", process_id, time);
+{      
+    //up(sem1);
+    printf("process [%d] stoped at time [%d]\n", process_id, getClk());
     raise(SIGSTOP);
 }
 
 void handler2()
 {
-    printf("process %d continued at time %d\n", process_id, time);
+    //down(sem1);
+    time = getClk();
+    printf("process [%d] continued at time [%d]\n", process_id, getClk());
 }
