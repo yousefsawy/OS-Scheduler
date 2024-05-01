@@ -197,6 +197,8 @@ int main(int argc, char * argv[])
         {
             if(update)
             {
+                RR_current_quantum--;
+                
                 if(p_terminated)
                 {
                     RR_current_process->process.finish_time = getClk();
@@ -215,7 +217,7 @@ int main(int argc, char * argv[])
                 if(!isEmpty_CircularQueue(&RR_queue) && RR_current_process == NULL) // First process to run
                 {
                     RR_current_process = RR_queue.front;
-                    RR_current_quantum = quantum - 1;
+                    RR_current_quantum = quantum;
                     RR_current_process->process.start_time = getClk();
                     RR_current_process->process.state = RUNNING;
                     kill(RR_current_process->process.pid, SIGCONT);
@@ -228,7 +230,7 @@ int main(int argc, char * argv[])
                     RR_current_process = RR_current_process->next;
                     printf("Current id2: %d\n", RR_current_process->process.id);
                     RR_current_process->process.state = RUNNING;
-                    RR_current_quantum = quantum - 1;
+                    RR_current_quantum = quantum;
                     if(RR_current_process->process.start_time == 0)
                     {
                         RR_current_process->process.start_time = getClk();
@@ -238,18 +240,13 @@ int main(int argc, char * argv[])
                 else if(RR_current_process && RR_current_quantum == quantum) // process after terminated one
                 {
                     RR_current_process->process.state = RUNNING;
-                    RR_current_quantum = quantum - 1;
+                    RR_current_quantum = quantum;
                     if(RR_current_process->process.start_time == 0)
                     {
                         RR_current_process->process.start_time = getClk();
                     }
                     kill(RR_current_process->process.pid, SIGCONT);
                 }
-                else if (RR_current_process) // Process hasn't finished its allowed time
-                {
-                    RR_current_quantum--;
-                }
-
             }
         }
 
