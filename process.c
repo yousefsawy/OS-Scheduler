@@ -2,10 +2,16 @@
 
 /* Modify this file as needed*/
 int remainingtime;
+void handler();
+int process_id;
+int time;
+void handler2();
 
 int main(int agrc, char * argv[])
 {
     initClk();
+    signal(SIGUSR1,handler);
+    signal(SIGCONT,handler2);
 
     //Initiating 2 Semaphores for Scheduler Synchronization
     key_t key_id1, key_id2;
@@ -33,7 +39,7 @@ int main(int agrc, char * argv[])
     //TODO it needs to get the remaining time from somewhere
     
     remainingtime = atoi(argv[1]);
-    int process_id = atoi(argv[2]);
+    process_id = atoi(argv[2]);
 
 
     //SIGSTOP Process when first forked to move to RDY Queue
@@ -44,7 +50,7 @@ int main(int agrc, char * argv[])
 
     printf("process [%d] starting at time [%d]\n", process_id, getClk()); //starting ack
 
-    int time = getClk();
+    time = getClk();
 
     while (remainingtime > 0)
     {
@@ -64,12 +70,14 @@ int main(int agrc, char * argv[])
     return 0;
 }
 
-void handler1()
-{
-    printf("Process is Stopped");
+
+void handler()
+{  
+    printf("process %d stoped at time %d\n", process_id, time);
+    raise(SIGSTOP);
 }
 
 void handler2()
 {
-    printf("Process is continued");
+    printf("process %d continued at time %d\n", process_id, time);
 }

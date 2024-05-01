@@ -18,6 +18,7 @@ int main(int argc, char * argv[])
 
     //Some instantiations
     PCB processes[processes_count];
+    printf("Prcs count %d", processes_count);
     for (int i = 0; i < processes_count; i++)
     {
         processes[i].id = 0;
@@ -107,16 +108,7 @@ int main(int argc, char * argv[])
             Process_arrived++;
             message.process.state = READY;
             processes[message.process.id - 1] = message.process;
-            if (algo == 1) //HPF
-            {
-                enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
-                queue_size++;
-            }
-            else if (algo == 3)
-            {
-                enqueue_CircularQueue(&RR_queue, message.process);
-                queue_size++;
-            }
+
 
             //For & make sure process is Stopped before continuing code
             char s_running_time[5], s_id[5];
@@ -134,12 +126,19 @@ int main(int argc, char * argv[])
             }
             kill(pid,SIGSTOP);
 
-            if (algo == 3)
+            processes[message.process.id - 1].pid = pid;
+
+            if (algo == 1) //HPF
             {
-                RR_queue.rear->process.pid = pid;
+                enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
+                queue_size++;
+            }
+            else if (algo == 3)
+            {
+                enqueue_CircularQueue(&RR_queue, processes[message.process.id - 1]);
+                queue_size++;
             }
 
-            processes[message.process.id - 1].pid = pid;
             continue;
         }
 
@@ -148,7 +147,7 @@ int main(int argc, char * argv[])
             printf("current time is [%d]\n", getClk());
         }
 
-        usleep(200000); //sleeps for 0.2 seconds
+        //usleep(200000); //sleeps for 0.2 seconds
 
         if (algo == 1) //HPF
         {
@@ -186,17 +185,12 @@ int main(int argc, char * argv[])
             if(update)
             {
                 if(running_pid != -1)
-                {
                     kill(running_pid, SIGSTOP);
-                }
-
 
                 running_pid = ShortestRemaining(processes, Process_arrived);
 
                 if(running_pid != -1)
-                {
                     kill(running_pid, SIGCONT);
-                }
             }
         }
         else if(algo == 3) //RR
@@ -228,10 +222,11 @@ int main(int argc, char * argv[])
                 }
                 else if(RR_current_quantum == 0) // Process has finished its allowed time
                 {
-                    printf("SHOULD BE STOPED HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                     RR_current_process->process.state = READY;
-                    kill(RR_current_process->process.pid, SIGSTOP);
+                    kill(RR_current_process->process.pid, SIGUSR1);
+                    printf("Current id: %d\n", RR_current_process->process.id);
                     RR_current_process = RR_current_process->next;
+                    printf("Current id2: %d\n", RR_current_process->process.id);
                     RR_current_process->process.state = RUNNING;
                     RR_current_quantum = quantum - 1;
                     if(RR_current_process->process.start_time == 0)
@@ -258,7 +253,7 @@ int main(int argc, char * argv[])
             }
         }
 
-        usleep(200000); //sleeps for 0.2 seconds
+        //usleep(200000); //sleeps for 0.2 seconds
 
         //update PCB blocks
         if (update)
