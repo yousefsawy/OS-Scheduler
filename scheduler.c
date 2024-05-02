@@ -1,4 +1,5 @@
 #include "headers.h"
+#include <math.h>
 
 bool p_terminated = false; //flag for indicating that a process terminated in current timestep
 int p_terminated_id = -1;
@@ -260,10 +261,30 @@ int main(int argc, char * argv[])
         //update PCB blocks
         if (update)
         {
-            for (int i = 0; i < processes_count; i++)
+            if(algo == 1)
             {
-                if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
-                else if (processes[i].state == READY) {processes[i].waiting_time ++;}
+                for (int i = 0; i < processes_count; i++)
+                {
+                    if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
+                    else if (processes[i].state == READY) {processes[i].waiting_time ++;}
+                }
+            }
+            else if(algo == 3)
+            {
+                CQ_Node *current = RR_queue.front;
+                if(current->process.start_time != 0 && current->process.state == READY)
+                {
+                    current->process.waiting_time++;
+                    current=current->next;
+                }
+                while(current != RR_queue.front)
+                {
+                    if(current->process.start_time != 0 && current->process.state == READY)
+                    {
+                        current->process.waiting_time++;
+                        current=current->next;
+                    }
+                }
             }
 
             printf("============================\n");
@@ -276,9 +297,45 @@ int main(int argc, char * argv[])
             update = true;
             time = getClk();
         }
-     }
+    }
 
     destroy_PriorityQueue(&HPF_queue);
+    destroy_CircularQueue(&RR_queue);
+    
+
+    // Performance file
+    float avgWTA = 0, avgWaiting = 0, stdWTA = 0;
+    float utilization = 1 - processes[0].start_time / processes[processes_count-1].finish_time;
+    utilization *= 100;
+
+    for(int i = 0; i < processes_count; i++)
+    {
+        avgWaiting += processes[i].waiting_time;
+        avgWTA += (processes[i].finish_time - processes[i].arrival_time) / processes[i].running_time;
+    }
+
+    for(int i = 0; i < processes_count; i++)
+    {
+        stdWTA += pow(((processes[i].finish_time - processes[i].arrival_time) / processes[i].running_time) - avgWTA, 2);
+    }
+
+    stdWTA/= processes_count;
+    stdWTA = sqrt(stdWTA);
+
+    avgWaiting /= processes_count;
+    avgWTA /= processes_count;
+
+    FILE *file = fopen("scheduler.perf", "w");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return 1;
+    }
+    fprintf(file, "CPU utilization = %.2f%%\n", utilization);
+    fprintf(file, "Avg WTA = %.2f\n", avgWTA);
+    fprintf(file, "Avg Waiting = %.2f\n", avgWaiting);
+    fprintf(file, "Std WTA = %.2f\n", stdWTA);
+    fclose(file);
+
 
     //upon termination release the clock resources.
 
