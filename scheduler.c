@@ -4,8 +4,7 @@
 bool p_terminated = false; //flag for indicating that a process terminated in current timestep
 int p_terminated_id = -1;
 void handler();
-int ShortestRemaining(PCB* Processes, int count);
-
+int ShortestRemaining(PCB* Processes, int count, int* index);
 int main(int argc, char * argv[])
 {
     initClk();
@@ -31,6 +30,7 @@ int main(int argc, char * argv[])
         processes[i].remaining_time = 0;
         processes[i].finish_time = 0;
         processes[i].state = UNKNOWN;
+        processes[i].start_time = -1;
     }
     msgbuff message;
     message.mtype = getppid();
@@ -65,8 +65,9 @@ int main(int argc, char * argv[])
     bool update = true;                                                    //
     bool CPU_available = true;                                             //
     int Process_arrived = 0;                                               //
-    int running_pid = -1; 
-    int received = 0;                                                 //
+    int running_pid = -1;                                                  //
+    int received = 0;                                                      //
+    int* index = (int*) malloc(sizeof(int)); *index = 0;                   //
     /////////////////////////////////////////////////////////////////////////
     while(true)
     {
@@ -170,10 +171,15 @@ int main(int argc, char * argv[])
 
                 received = 0;
                 int prev_pid = running_pid;
-                running_pid = ShortestRemaining(processes, Process_arrived);
-
+                running_pid = ShortestRemaining(processes, Process_arrived, index);
                 if(running_pid != -1 && running_pid != prev_pid)
+                {
                     kill(running_pid, SIGCONT);
+                    if(processes[*index].start_time == -1)
+                    {
+                        processes[*index].start_time = getClk();
+                    }
+                }
             }
         }
         else if(algo == 3) //RR
@@ -285,7 +291,9 @@ int main(int argc, char * argv[])
 
     // Performance file
     float avgWTA = 0, avgWaiting = 0, stdWTA = 0;
-    float utilization = 1 - processes[0].start_time / processes[processes_count-1].finish_time;
+    printf("St Time: %d\n", processes[0].start_time);
+    printf("Fn Time: %d\n", processes[processes_count-1].finish_time);
+    float utilization = 1 - ((float) processes[0].start_time) / processes[processes_count-1].finish_time;
     utilization *= 100;
 
     for(int i = 0; i < processes_count; i++)
@@ -332,7 +340,7 @@ void handler()
 }
 
 
-int ShortestRemaining(PCB* Processes, int count)
+int ShortestRemaining(PCB* Processes, int count, int* index)
 {
     int shortest = INT_MAX;
     int pid = -1;
@@ -344,6 +352,7 @@ int ShortestRemaining(PCB* Processes, int count)
             {
                 pid = Processes[i].pid;
                 shortest = Processes[i].remaining_time;
+                *index = i;
             }
         }
     }

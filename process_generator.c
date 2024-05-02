@@ -126,6 +126,7 @@ int main(int argc, char * argv[])
         processes[i].remaining_time = runtimes[i];
         processes[i].finish_time = 0;
         processes[i].state = UNKNOWN;
+        processes[i].start_time = -1;
     }
 
     // TODO Generation Main Loop
