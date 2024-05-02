@@ -54,28 +54,6 @@ int main(int argc, char * argv[])
         return -1;
     }
 
-    //Initiating 2 Semaphores for process synch
-    key_t key_id1, key_id2;
-    union Semun semun;
-
-    key_id1 = ftok("keyfile", 65);
-    key_id2 = ftok("keyfile", 64);
-
-    int sem1 = semget(key_id1, 1, 0666 | IPC_CREAT); //SEM 1 -> For client write
-    int sem2 = semget(key_id2, 1, 0666 | IPC_CREAT); //SEM 2 -> For Server Read
-
-    semun.val = 1;
-    if (semctl(sem1, 0, SETVAL, semun) == -1)
-    {
-        perror("Error in semctl");
-        exit(-1);
-    }
-
-    if (semctl(sem2, 0, SETVAL, semun) == -1)
-    {
-        perror("Error in semctl");
-        exit(-1);
-    }
 
     //TODO implement the scheduler :)
 
@@ -186,12 +164,14 @@ int main(int argc, char * argv[])
 
             if(update)
             {
-                if(running_pid != -1)
+                if(running_pid != -1 && received)
                     kill(running_pid, SIGSTOP);
-            
+
+                received = 0;
+                int prev_pid = running_pid;
                 running_pid = ShortestRemaining(processes, Process_arrived);
 
-                if(running_pid != -1)
+                if(running_pid != -1 && running_pid != prev_pid)
                     kill(running_pid, SIGCONT);
             }
         }
