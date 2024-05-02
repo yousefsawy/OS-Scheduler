@@ -218,7 +218,13 @@ void deleteNode_CircularQueue(CircularQueue *queue, int PID)
     {
         if (current->process.pid == PID)
         {
-            if (current == queue->front)
+            if (current == queue->front && current == queue->rear)
+            {
+                init_CircularQueue(queue);
+                free(current);
+                return;
+            }
+            else if (current == queue->front)
             {
                 // If the node to be deleted is the front node
                 queue->front = current->next;

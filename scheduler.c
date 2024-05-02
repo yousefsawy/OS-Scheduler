@@ -7,6 +7,15 @@ void handler();
 int ShortestRemaining(PCB* Processes, int count, int* index);
 int main(int argc, char * argv[])
 {
+    char LogStr[10000] = "";
+
+    //Opening log file
+    FILE *fileLog = fopen("scheduler.log", "w");
+    if (fileLog == NULL) {
+        printf("Error opening file!\n");
+        return 1;
+    }
+
     initClk();
 
     signal(SIGUSR1, handler);
@@ -30,7 +39,7 @@ int main(int argc, char * argv[])
         processes[i].remaining_time = 0;
         processes[i].finish_time = 0;
         processes[i].state = UNKNOWN;
-        processes[i].start_time = -1;
+        processes[i].start_time = 0;
     }
     msgbuff message;
     message.mtype = getppid();
@@ -115,7 +124,7 @@ int main(int argc, char * argv[])
                 enqueue_PriorityQueue(&HPF_queue, processes[message.process.id - 1], message.process.priority);
                 queue_size++;
             }
-            else if (algo == 3)
+            else if (algo == 3) //RR
             {
                 enqueue_CircularQueue(&RR_queue, processes[message.process.id - 1]);
                 queue_size++;
@@ -140,6 +149,12 @@ int main(int argc, char * argv[])
                 terminate_count ++;
                 p_terminated = false;
                 CPU_available = true;
+                int TA = (processes[p_terminated_id-1].finish_time - processes[p_terminated_id-1].arrival_time);
+                int WTA = TA / processes[p_terminated_id-1].running_time;
+
+                char line[100];
+                sprintf(line, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %d\n", getClk(), p_terminated_id, processes[p_terminated_id-1].arrival_time, processes[p_terminated_id-1].running_time, 0, processes[p_terminated_id-1].waiting_time, TA, WTA); 
+                strcat(LogStr,line);
                 if (terminate_count == processes_count) {break;}
             }
 
@@ -147,37 +162,69 @@ int main(int argc, char * argv[])
             {
                 HPF_queue.head->process.state = RUNNING;
                 HPF_queue.head->process.start_time = getClk();
+                HPF_queue.head->process.waiting_time = processes[terminate_count].waiting_time;
                 kill(HPF_queue.head->process.pid, SIGCONT);
                 processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
                 CPU_available = false;
+
+                char line[100];
+                sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), terminate_count + 1, processes[terminate_count].arrival_time, processes[terminate_count].running_time, 0, processes[terminate_count].waiting_time); 
+                strcat(LogStr,line);
             }
         }
         else if(algo == 2) //SRTN
         {
-            if (update && p_terminated) //at first check if a process terminated
+            if (update && p_terminated) //Terminated
             {
                 processes[p_terminated_id-1].finish_time = getClk();
                 processes[p_terminated_id-1].state = TERMINATED;
                 terminate_count ++;
                 p_terminated = false;
                 running_pid = -1;
+
+                //Writing to log Terminated
+                int TA = (processes[p_terminated_id-1].finish_time - processes[p_terminated_id-1].arrival_time);
+                int WTA = TA / processes[p_terminated_id-1].running_time;
+
+                char line[100];
+                sprintf(line, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %d\n", getClk(), p_terminated_id, processes[p_terminated_id-1].arrival_time, processes[p_terminated_id-1].running_time, 0, processes[p_terminated_id-1].waiting_time, TA, WTA); 
+                strcat(LogStr,line);
                 if (terminate_count == processes_count) {break;}
             }
 
             if(update)
             {
-                if(running_pid != -1 && received)
+                if(running_pid != -1 && received) //Stopped
+                {
                     kill(running_pid, SIGSTOP);
+                    processes[*index].state = READY;
+
+                    char line[100];
+                    sprintf(line, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), *index+1, processes[*index].arrival_time, processes[*index].running_time, 0, processes[*index].waiting_time); 
+                    strcat(LogStr,line);
+                }
+
 
                 received = 0;
                 int prev_pid = running_pid;
                 running_pid = ShortestRemaining(processes, Process_arrived, index);
                 if(running_pid != -1 && running_pid != prev_pid)
                 {
+                    processes[*index].state = RUNNING;
                     kill(running_pid, SIGCONT);
-                    if(processes[*index].start_time == -1)
+                    if(processes[*index].start_time == 0) //Started
                     {
                         processes[*index].start_time = getClk();
+
+                        char line[100];
+                        sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), *index+1, processes[*index].arrival_time, processes[*index].running_time, 0, processes[*index].waiting_time); 
+                        strcat(LogStr,line);
+                    }
+                    else //Resumed
+                    {
+                        char line[100];
+                        sprintf(line, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), *index+1, processes[*index].arrival_time, processes[*index].running_time, 0, processes[*index].waiting_time); 
+                        strcat(LogStr,line);
                     }
                 }
             }
@@ -190,8 +237,7 @@ int main(int argc, char * argv[])
                 {
                     RR_current_quantum--;
                 }
-                
-                if(p_terminated)
+                if(p_terminated) //TERMINATED
                 {
                     RR_current_process->process.finish_time = getClk();
                     RR_current_process->process.state = TERMINATED;
@@ -203,39 +249,80 @@ int main(int argc, char * argv[])
                     RR_current_process = RR_current_process->next;
                     RR_current_quantum = quantum;
                     deleteNode_CircularQueue(&RR_queue, terminatedPID);
+
+                    if(isEmpty_CircularQueue(&RR_queue))
+                    {
+                        RR_current_process = NULL;
+                    }
+
+
+                    int TA = (processes[p_terminated_id-1].finish_time - processes[p_terminated_id-1].arrival_time);
+                    int WTA = TA / processes[p_terminated_id-1].running_time;
+                    
+                    char line[100];
+                    sprintf(line, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %d\n", getClk(), p_terminated_id, processes[p_terminated_id-1].arrival_time, processes[p_terminated_id-1].running_time, 0, processes[p_terminated_id-1].waiting_time, TA, WTA); 
+                    strcat(LogStr,line);
                     if (terminate_count == processes_count) {break;}
                 }
-
                 if(!isEmpty_CircularQueue(&RR_queue) && RR_current_process == NULL) // First process to run
                 {
                     RR_current_process = RR_queue.front;
                     RR_current_quantum = quantum;
                     RR_current_process->process.start_time = getClk();
                     RR_current_process->process.state = RUNNING;
-                    kill(RR_current_process->process.pid, SIGCONT);
+                    kill(RR_current_process->process.pid, SIGCONT); //Started
+
+                    char line[100];
+                    sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                    strcat(LogStr,line);
                 }
                 else if(RR_current_quantum == 0 && RR_queue.front != RR_queue.rear) // Process has finished its allowed time
                 {
                     RR_current_process->process.state = READY;
-                    kill(RR_current_process->process.pid, SIGSTOP);
-                    printf("Current id: %d\n", RR_current_process->process.id);
+                    kill(RR_current_process->process.pid, SIGSTOP); //Stopped
+
+                    char line[100];
+                    sprintf(line, "At time %d process %d stoped arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                    strcat(LogStr,line);
+
                     RR_current_process = RR_current_process->next;
-                    printf("Current id2: %d\n", RR_current_process->process.id);
                     RR_current_process->process.state = RUNNING;
                     RR_current_quantum = quantum;
-                    if(RR_current_process->process.start_time == 0)
+                    if(RR_current_process->process.start_time == 0) //Started
                     {
                         RR_current_process->process.start_time = getClk();
+
+                        char line[100];
+                        sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                        strcat(LogStr,line);
+                    }
+                    else //Resumed
+                    {
+                        char line[100];
+                        sprintf(line, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                        strcat(LogStr,line);
                     }
                     kill(RR_current_process->process.pid, SIGCONT);
                 }
                 else if(RR_current_process && RR_current_quantum == quantum) // process after terminated one
-                {
+                { 
                     RR_current_process->process.state = RUNNING;
                     RR_current_quantum = quantum;
-                    if(RR_current_process->process.start_time == 0)
+                    if(RR_current_process->process.start_time == 0) //Started
                     {
                         RR_current_process->process.start_time = getClk();
+
+                        char line[100];
+                        sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                        strcat(LogStr,line);
+
+                    }
+                    else //Resumed
+                    {
+                        char line[100];
+                        sprintf(line, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, 0, RR_current_process->process.waiting_time); 
+                        strcat(LogStr,line);
+
                     }
                     kill(RR_current_process->process.pid, SIGCONT);
                 }
@@ -247,15 +334,17 @@ int main(int argc, char * argv[])
         //update PCB blocks
         if (update)
         {
-            if(algo == 1)
+            if(algo == 1 || algo == 2)
             {
                 for (int i = 0; i < processes_count; i++)
                 {
                     if (processes[i].state == RUNNING) {processes[i].remaining_time --;}
-                    else if (processes[i].state == READY) {processes[i].waiting_time ++;}
+                    else if (processes[i].state == READY) {
+                        processes[i].waiting_time ++;
+                    }
                 }
             }
-            else if(algo == 3)
+            else if(algo == 3 && RR_current_process)
             {
                 CQ_Node *current = RR_queue.front;
                 if(current->process.start_time != 0 && current->process.state == READY)
@@ -291,8 +380,6 @@ int main(int argc, char * argv[])
 
     // Performance file
     float avgWTA = 0, avgWaiting = 0, stdWTA = 0;
-    printf("St Time: %d\n", processes[0].start_time);
-    printf("Fn Time: %d\n", processes[processes_count-1].finish_time);
     float utilization = 1 - ((float) processes[0].start_time) / processes[processes_count-1].finish_time;
     utilization *= 100;
 
@@ -323,7 +410,8 @@ int main(int argc, char * argv[])
     fprintf(file, "Avg Waiting = %.2f\n", avgWaiting);
     fprintf(file, "Std WTA = %.2f\n", stdWTA);
     fclose(file);
-
+    fprintf(fileLog,"%s", LogStr);
+    fclose(fileLog);
 
     //upon termination release the clock resources.
 
