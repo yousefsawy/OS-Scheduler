@@ -26,12 +26,18 @@ int main(int agrc, char * argv[])
 
     time = getClk();
 
-    while (remainingtime > 0)
+    while (remainingtime > 0) //Not Pre-empted:
     {
-        if (time != getClk())
+        int new_time = getClk();
+        if (time + 1 == new_time)
         {
             remainingtime --;
-            time = getClk();
+            time = new_time;
+        }
+
+        if(time + 1 < new_time)
+        {
+            time = new_time;
         }
     }
     kill(getppid(), SIGUSR1); //sends termination signal to scheduler in order to handle it
