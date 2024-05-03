@@ -141,9 +141,10 @@ int main(int argc, char *argv[])
         {
             printf("current time is [%d]\n", getClk());
             totalTime++;
+            usleep(200000); // sleeps for 0.2 seconds
         }
 
-        //usleep(200000); // sleeps for 0.2 seconds
+        
 
         if (algo == 1) // HPF
         {

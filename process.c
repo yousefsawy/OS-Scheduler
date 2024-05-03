@@ -26,7 +26,7 @@ int main(int agrc, char * argv[])
 
     time = getClk();
 
-    while (remainingtime > 0) //Not Pre-empted:
+    while (remainingtime > 0) // 8  10
     {
         int new_time = getClk();
         if (time + 1 == new_time)
@@ -35,7 +35,7 @@ int main(int agrc, char * argv[])
             time = new_time;
         }
 
-        if(time + 1 < new_time)
+        if(time < new_time)
         {
             time = new_time;
         }
