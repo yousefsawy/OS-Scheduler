@@ -237,6 +237,11 @@ int main(int argc, char *argv[])
                         strcat(LogStr, line);
                     }
                 }
+
+                if(running_pid == -1)
+                {
+                    //empty
+                }
             }
         }
         else if (algo == 3) // RR
