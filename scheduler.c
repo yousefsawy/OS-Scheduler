@@ -202,19 +202,22 @@ int main(int argc, char *argv[])
 
             if (update)
             {
-                if (running_pid != -1 && received) // Stopped
+                int prev_pid = running_pid;
+                int prev_index = *index;
+                running_pid = ShortestRemaining(processes, Process_arrived, index);
+
+
+                if (prev_pid != -1 && running_pid != prev_pid) // Stopped
                 {
-                    kill(running_pid, SIGSTOP);
-                    processes[*index].state = READY;
+                    kill(prev_pid, SIGSTOP);
+                    processes[prev_index].state = READY;
 
                     char line[100];
-                    sprintf(line, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), *index + 1, processes[*index].arrival_time, processes[*index].running_time, processes[*index].remaining_time, processes[*index].waiting_time);
+                    sprintf(line, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), prev_index + 1, processes[prev_index].arrival_time, processes[prev_index].running_time, processes[prev_index].remaining_time, processes[prev_index].waiting_time);
                     strcat(LogStr, line);
                 }
 
                 received = 0;
-                int prev_pid = running_pid;
-                running_pid = ShortestRemaining(processes, Process_arrived, index);
                 if (running_pid != -1 && running_pid != prev_pid)
                 {
                     processes[*index].state = RUNNING;
