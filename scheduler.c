@@ -68,7 +68,9 @@ int main(int argc, char *argv[])
     // TODO implement the scheduler :)
 
     /////////////////////// flags and counters for sync /////////////////////
-    int time = getClk();       //
+    int time = getClk(); 
+    int idleTime = 0;      //
+    int totalTime = 0;
     int queue_size = 0;        //
     int terminate_count = 0;   // add more if needed
     bool update = true;        //
@@ -138,6 +140,7 @@ int main(int argc, char *argv[])
         if (update)
         {
             printf("current time is [%d]\n", getClk());
+            totalTime++;
         }
 
         //usleep(200000); // sleeps for 0.2 seconds
@@ -175,6 +178,11 @@ int main(int argc, char *argv[])
                 char line[100];
                 sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), terminate_count + 1, processes[terminate_count].arrival_time, processes[terminate_count].running_time, processes[terminate_count].remaining_time, processes[terminate_count].waiting_time);
                 strcat(LogStr, line);
+            }
+
+            if(update && CPU_available)
+            {
+                idleTime++;
             }
         }
         else if (algo == 2) // SRTN
@@ -240,7 +248,7 @@ int main(int argc, char *argv[])
 
                 if(running_pid == -1)
                 {
-                    //empty
+                    idleTime++;
                 }
             }
         }
@@ -253,6 +261,7 @@ int main(int argc, char *argv[])
                     RR_current_quantum--;
                     RR_current_process->process.remaining_time--;
                 }
+
                 if (p_terminated) // TERMINATED
                 {
                     RR_current_process->process.finish_time = getClk();
@@ -268,6 +277,7 @@ int main(int argc, char *argv[])
 
                     if (isEmpty_CircularQueue(&RR_queue))
                     {
+                        init_CircularQueue(&RR_queue);
                         RR_current_process = NULL;
                     }
 
@@ -282,6 +292,7 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
+
                 if (!isEmpty_CircularQueue(&RR_queue) && RR_current_process == NULL) // First process to run
                 {
                     RR_current_process = RR_queue.front;
@@ -289,15 +300,17 @@ int main(int argc, char *argv[])
                     RR_current_process->process.start_time = getClk();
                     RR_current_process->process.state = RUNNING;
                     kill(RR_current_process->process.pid, SIGCONT); // Started
+                    printf("Process %d first run\n", RR_current_process->process.id);
 
                     char line[100];
                     sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, RR_current_process->process.remaining_time, RR_current_process->process.waiting_time);
                     strcat(LogStr, line);
                 }
-                else if (RR_current_quantum == 0 && RR_queue.front != RR_queue.rear) // Process has finished its allowed time
+                else if (RR_current_quantum == 0 && RR_current_process) // Process has finished its allowed time
                 {
                     RR_current_process->process.state = READY;
                     kill(RR_current_process->process.pid, SIGSTOP); // Stopped
+                    printf("Process %d stoped\n", RR_current_process->process.id);
 
                     char line[100];
                     sprintf(line, "At time %d process %d stoped arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, RR_current_process->process.remaining_time, RR_current_process->process.waiting_time);
@@ -321,6 +334,7 @@ int main(int argc, char *argv[])
                         strcat(LogStr, line);
                     }
                     kill(RR_current_process->process.pid, SIGCONT);
+                    printf("process %d continue after a process stoped\n", RR_current_process->process.id);
                 }
                 else if (RR_current_process && RR_current_quantum == quantum) // process after terminated one
                 {
@@ -341,8 +355,14 @@ int main(int argc, char *argv[])
                         strcat(LogStr, line);
                     }
                     kill(RR_current_process->process.pid, SIGCONT);
+                    printf("process %d continue after a process terminated\n", RR_current_process->process.id);
                 }
             }
+        }
+
+        if(update && algo == 3 && isEmpty_CircularQueue(&RR_queue))
+        {
+            idleTime++;
         }
 
         //usleep(200000); // sleeps for 0.2 seconds
@@ -367,14 +387,14 @@ int main(int argc, char *argv[])
             else if (algo == 3 && RR_current_process)
             {
                 CQ_Node *current = RR_queue.front;
-                if (current->process.start_time != 0 && current->process.state == READY)
+                if (current->process.state == READY)
                 {
                     current->process.waiting_time++;
                 }
                 current = current->next;
                 while (current != RR_queue.front)
                 {
-                    if (current->process.start_time != 0 && current->process.state == READY)
+                    if (current->process.state == READY)
                     {
                         current->process.waiting_time++;
                     }
@@ -399,25 +419,26 @@ int main(int argc, char *argv[])
 
     // Performance file
     float avgWTA = 0, avgWaiting = 0, stdWTA = 0;
-    float utilization = 1 - ((float)processes[0].start_time) / processes[processes_count - 1].finish_time;
-    utilization *= 100;
+    float utilization = (1 - (float)idleTime/totalTime) * 100;
 
     for (int i = 0; i < processes_count; i++)
     {
         avgWaiting += processes[i].waiting_time;
-        avgWTA += (processes[i].finish_time - processes[i].arrival_time) / processes[i].running_time;
+        avgWTA += (processes[i].finish_time - processes[i].arrival_time) / (float)processes[i].running_time;
     }
+    
+    avgWTA /= processes_count;
 
     for (int i = 0; i < processes_count; i++)
     {
-        stdWTA += pow(((processes[i].finish_time - processes[i].arrival_time) / processes[i].running_time) - avgWTA, 2);
+        float WTA_ = (processes[i].finish_time - processes[i].arrival_time) / (float)processes[i].running_time;
+        stdWTA += pow(WTA_ - avgWTA, 2);
     }
 
     stdWTA /= processes_count;
     stdWTA = sqrt(stdWTA);
 
     avgWaiting /= processes_count;
-    avgWTA /= processes_count;
 
     FILE *file = fopen("scheduler.perf", "w");
     if (file == NULL)
@@ -425,7 +446,7 @@ int main(int argc, char *argv[])
         printf("Error opening file!\n");
         return 1;
     }
-    fprintf(file, "CPU utilization = %.2f%%\n", utilization);
+    fprintf(file, "CPU utilization = %.f%%\n", utilization);
     fprintf(file, "Avg WTA = %.2f\n", avgWTA);
     fprintf(file, "Avg Waiting = %.2f\n", avgWaiting);
     fprintf(file, "Std WTA = %.2f\n", stdWTA);
