@@ -24,6 +24,7 @@ typedef struct PCB
     int remaining_time;
     int finish_time;
     ProcessState state;
+    int memoryspace;
 } PCB;
 
 //Message buffer
@@ -287,3 +288,80 @@ void destroy_CircularQueue(CircularQueue *queue)
         free(temp);
     }
 }
+
+
+
+
+
+//--------------------------------------------------Linked List Of Processes--------------------------------------------------
+/**
+ * @struct Linked_Node
+ * @brief Structure representing a node in a linked list.
+ */
+typedef struct Linked_Node {
+    PCB process;                  /**< PCB representing a process. */
+    struct Linked_Node* next;     /**< Pointer to the next node in the linked list. */
+} Linked_Node;
+
+
+/**
+ * @struct LinkedList
+ * @brief Structure representing a linked list.
+ */
+typedef struct {
+    struct Linked_Node* head;     /**< Pointer to the head of the linked list. */
+    int count;                    /**< Count of nodes in the linked list. */
+} LinkedList;
+
+
+/**
+ * @brief Initialize a linked list.
+ * @param memlist Pointer to the linked list to be initialized.
+ */
+void LinkedList_Init(LinkedList* memlist) {
+    memlist->head = NULL;
+}
+
+
+/**
+ * @brief Add a node with a PCB to the linked list.
+ * @param memlist Pointer to the linked list.
+ * @param process PCB representing a process to be added to the list.
+ */
+void LinkedList_AddNode(LinkedList* memlist, PCB process) {
+    /* Increment the count of nodes in the linked list */
+    memlist->count++;
+    /* Allocate memory for a new node */
+    struct Linked_Node* newNode = (Linked_Node*)malloc(sizeof(Linked_Node));
+    /* Set the process of the new node to the provided process */
+    newNode->process = process;
+    newNode->next = NULL;           /* Set the next pointer of the new node to NULL initially */
+    if (memlist->head == NULL) {    /* If the linked list is empty, set the new node as the head of the list */
+        memlist->head = newNode;
+    } else {                    /* If the linked list is not empty, traverse to the end of the list and append the new node */
+        struct Linked_Node* curr = memlist->head;
+        while (curr->next != NULL) { curr = curr->next; }
+        curr->next = newNode;   // Append the new node to the end of the list
+    }
+}
+
+
+/**
+ * @brief Retrieve the memory space of the process at the specified index in the linked list.
+ * @param memlist Pointer to the linked list.
+ * @param index Index of the node in the linked list.
+ * @return Memory space required by the process at the specified index.
+ * @return 0 if the index is out of bounds or if the linked list is empty.
+ */
+int LinkedList_GetMemory(LinkedList* memlist, int index) {
+    if (!memlist->head) { return 0; }   // If the linked list is empty, return 0
+    if (memlist->count <= index) { return 0; }   // If the index is out of bounds, return 0
+    // Traverse the linked list to the node at the specified index
+    struct Linked_Node* curr = memlist->head;
+    for (int i = 0; i < index; i++) { 
+        curr = curr->next; 
+    }
+    return curr->process.memoryspace;   // Return the memory space of the process at the specified index
+}
+
+
