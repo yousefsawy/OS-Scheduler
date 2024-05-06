@@ -354,14 +354,36 @@ void LinkedList_AddNode(LinkedList* memlist, PCB process) {
  * @return 0 if the index is out of bounds or if the linked list is empty.
  */
 int LinkedList_GetMemory(LinkedList* memlist, int index) {
-    if (!memlist->head) { return 0; }   // If the linked list is empty, return 0
+    if (!memlist->head) { return 0; }            // If the linked list is empty, return 0
     if (memlist->count <= index) { return 0; }   // If the index is out of bounds, return 0
     // Traverse the linked list to the node at the specified index
     struct Linked_Node* curr = memlist->head;
-    for (int i = 0; i < index; i++) { 
-        curr = curr->next; 
-    }
+    for (int i = 0; i < index; i++) { curr = curr->next; }
     return curr->process.memoryspace;   // Return the memory space of the process at the specified index
 }
 
+/**
+ * @brief Remove and retrieve the PCB at the specified index in the linked list.
+ * @param memlist Pointer to the linked list.
+ * @param index Index of the node in the linked list.
+ * @return PCB at the specified index.
+ * @return An empty PCB if the index is out of bounds or if the linked list is empty.
+ */
+PCB LinkedList_GetPCB(LinkedList* memlist, int index) {
+    PCB emptyPCB;   // Empty PCB to return if the list is empty or index is out of bounds
+    emptyPCB.memoryspace = 0;
+    if (!memlist->head) { return emptyPCB; }            // If the linked list is empty, return empty PCB
+    if (memlist->count <= index) { return emptyPCB; }   // If the index is out of bounds, return empty PCB
+    // Traverse the linked list to the node before the specified index
+    struct Linked_Node* tail = memlist->head;
+    struct Linked_Node* curr = memlist->head->next;
+    for (int i = 0; i < index-1; i++) { 
+        curr = curr->next; 
+        tail = tail->next; 
+    }
+    tail->next = curr->next;    // Adjust the next pointer of the previous node to skip the node to be removed
+    PCB ret = curr->process;    // Retrieve the process from the node to be removed
+    free(curr);                 // Free memory allocated for the node to be removed
+    return ret;                 // Return the retrieved process
+}
 
