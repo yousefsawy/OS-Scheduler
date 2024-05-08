@@ -6,14 +6,16 @@ int process_id;
 int time;
 int sem1, sem2;
 
+void handler();
+
 int main(int agrc, char * argv[])
 {
-    initClk();
-    
-    //TODO it needs to get the remaining time from somewhere
-    
     remainingtime = atoi(argv[1]);
     process_id = atoi(argv[2]);
+    initClk();
+    signal(SIGUSR2, handler);
+    //TODO it needs to get the remaining time from somewhere
+    
 
 
     //SIGSTOP Process when first forked to move to RDY Queue
@@ -22,22 +24,16 @@ int main(int agrc, char * argv[])
 
     //Process Starting RUN
 
-    printf("process [%d] starting at time [%d]\n", process_id, getClk()); //starting ack
+
 
     time = getClk();
-
-    while (remainingtime > 0) // 8  10
+    int rem = remainingtime;
+    while (remainingtime > 0)
     {
-        int new_time = getClk();
-        if (time + 1 == new_time)
+        if(rem != remainingtime)
         {
-            remainingtime --;
-            time = new_time;
-        }
-
-        if(time < new_time)
-        {
-            time = new_time;
+            rem = remainingtime;
+            printf("here36 %d\n", getClk());
         }
     }
     kill(getppid(), SIGUSR1); //sends termination signal to scheduler in order to handle it
@@ -50,3 +46,8 @@ int main(int agrc, char * argv[])
     return 0;
 }
 
+void handler()
+{
+    remainingtime--;
+    signal(SIGUSR2, handler);
+}

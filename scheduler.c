@@ -21,10 +21,29 @@ int main(int argc, char *argv[])
 
     signal(SIGUSR1, handler);
 
+
+
     // Reading file parameters
+    int Process_Arrival[atoi(argv[1])];
     int processes_count = atoi(argv[1]);
     int algo = atoi(argv[2]);
     int quantum = atoi(argv[3]);
+    char* p_arrival = argv[4];
+
+
+    for(int i = 0; i < processes_count; i++)
+    {
+        sscanf(p_arrival, "%d", &(Process_Arrival[i]));
+
+        while (*p_arrival && *p_arrival != ' ')
+            p_arrival++;
+        p_arrival++;
+    }
+
+    for(int i = 0; i < processes_count; i++)
+    {
+        printf("%d \n", Process_Arrival[i]);;
+    }
 
     // Some instantiations
     PCB processes[processes_count];
@@ -78,14 +97,21 @@ int main(int argc, char *argv[])
     int Process_arrived = 0;   //
     int running_pid = -1;      //
     int received = 0;          //
+    int stalled = 0;
     int *index = (int *)malloc(sizeof(int));
     *index = 0; //
     /////////////////////////////////////////////////////////////////////////
     while (true)
     {
         // receiving from pg
+        if(Process_Arrival[Process_arrived] == getClk() && !received)
+        {
+            usleep(200000); // sleeps for 0.2 seconds
+        }
 
         int rec_val = msgrcv(pg_s_id, &message, sizeof(message.process), message.mtype, IPC_NOWAIT);
+
+
         if (rec_val == -1)
         {
             if (errno == ENOMSG)
@@ -119,7 +145,6 @@ int main(int argc, char *argv[])
             {
                 execl("./process.out", "process.out", s_running_time, s_id, NULL);
             }
-            kill(pid, SIGSTOP);
 
             processes[message.process.id - 1].pid = pid;
 
@@ -133,9 +158,9 @@ int main(int argc, char *argv[])
                 enqueue_CircularQueue(&RR_queue, processes[message.process.id - 1]);
                 queue_size++;
             }
-
             continue;
         }
+
 
         if (update)
         {
@@ -150,14 +175,13 @@ int main(int argc, char *argv[])
         {
             if (update && p_terminated) // at first check if a process terminated
             {
-                processes[terminate_count].finish_time = getClk();
-                processes[terminate_count].state = TERMINATED;
+                processes[p_terminated_id-1].finish_time = getClk();
+                processes[p_terminated_id-1].state = TERMINATED;
                 terminate_count++;
                 p_terminated = false;
                 CPU_available = true;
-                int TA = (processes[p_terminated_id - 1].finish_time - processes[p_terminated_id - 1].arrival_time);
+                int TA = (processes[p_terminated_id-1].finish_time - processes[p_terminated_id-1].arrival_time);
                 int WTA = TA / processes[p_terminated_id - 1].running_time;
-
                 char line[100];
                 sprintf(line, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %d\n", getClk(), p_terminated_id, processes[p_terminated_id - 1].arrival_time, processes[p_terminated_id - 1].running_time, 0, processes[p_terminated_id - 1].waiting_time, TA, WTA);
                 strcat(LogStr, line);
@@ -169,15 +193,17 @@ int main(int argc, char *argv[])
 
             if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) // then check if there are no processes running
             {
+                int P_id;
+                P_id = HPF_queue.head->process.id;
                 HPF_queue.head->process.state = RUNNING;
                 HPF_queue.head->process.start_time = getClk();
-                HPF_queue.head->process.waiting_time = processes[terminate_count].waiting_time;
+                HPF_queue.head->process.waiting_time = processes[P_id].waiting_time;
                 kill(HPF_queue.head->process.pid, SIGCONT);
-                processes[terminate_count] = dequeue_PriorityQueue(&HPF_queue);
+                processes[P_id] = dequeue_PriorityQueue(&HPF_queue);
                 CPU_available = false;
 
                 char line[100];
-                sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), terminate_count + 1, processes[terminate_count].arrival_time, processes[terminate_count].running_time, processes[terminate_count].remaining_time, processes[terminate_count].waiting_time);
+                sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), P_id, processes[P_id].arrival_time, processes[P_id].running_time, processes[P_id].remaining_time, processes[P_id].waiting_time);
                 strcat(LogStr, line);
             }
 
@@ -214,11 +240,10 @@ int main(int argc, char *argv[])
                 int prev_pid = running_pid;
                 int prev_index = *index;
                 running_pid = ShortestRemaining(processes, Process_arrived, index);
-
+                printf("run pid %d\n",running_pid);
 
                 if (prev_pid != -1 && running_pid != prev_pid) // Stopped
                 {
-                    kill(prev_pid, SIGSTOP);
                     processes[prev_index].state = READY;
 
                     char line[100];
@@ -230,12 +255,11 @@ int main(int argc, char *argv[])
                 if (running_pid != -1 && running_pid != prev_pid)
                 {
                     processes[*index].state = RUNNING;
-                    kill(running_pid, SIGCONT);
                     if (processes[*index].start_time == 0) // Started
                     {
                         processes[*index].start_time = getClk();
-
                         char line[100];
+                        printf("process [%d] starting at time [%d]\n", *index + 1, getClk()); //starting ack
                         sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), *index + 1, processes[*index].arrival_time, processes[*index].running_time, processes[*index].remaining_time, processes[*index].waiting_time);
                         strcat(LogStr, line);
                     }
@@ -250,6 +274,13 @@ int main(int argc, char *argv[])
                 if(running_pid == -1)
                 {
                     idleTime++;
+                }
+                else 
+                {
+                    kill(running_pid,SIGSTOP);
+                    kill(running_pid,SIGUSR2);
+                    kill(running_pid,SIGCONT);
+                    printf("here 281\n");
                 }
             }
         }
@@ -404,6 +435,15 @@ int main(int argc, char *argv[])
             }
 
             printf("============================\n");
+            
+            if (received)
+            {
+                if(Process_Arrival[Process_arrived-1] != getClk())
+                {
+                    received = 0;
+                }
+            }
+
             update = false;
         }
 

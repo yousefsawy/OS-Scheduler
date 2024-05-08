@@ -70,11 +70,20 @@ int main(int argc, char * argv[])
         }
     }
 
+
+
     //Converting the file parameters into strings
-    char pcount[5], s_algo[5], s_quantum[5];
+    char pcount[5], s_algo[5], s_quantum[5], p_arrival[90] = "";
     sprintf(pcount, "%d", processes_count);
     sprintf(s_algo, "%d", algo);
     sprintf(s_quantum, "%d", quantum);
+
+    for(int i = 0; i < processes_count; i++)
+    {   
+        char P_arriv[10];
+        sprintf(P_arriv, "%d ", arrivals[i]);
+        strcat(p_arrival, P_arriv);
+    }
 
     // 3. Initiate and create the scheduler and clock processes.
 
@@ -99,7 +108,7 @@ int main(int argc, char * argv[])
     }
     else if (scheduler_pid == 0) //scheduler process
     {
-        execl("./scheduler.out", "scheduler.out", pcount, s_algo, s_quantum, NULL);
+        execl("./scheduler.out", "scheduler.out", pcount, s_algo, s_quantum, p_arrival, NULL);
         perror("Error in excel of scheduler");
         return -1;
     }
@@ -160,6 +169,7 @@ int main(int argc, char * argv[])
             else
             {
                 i ++;
+                printf("here172 %d", i);
             }
         }
     }
