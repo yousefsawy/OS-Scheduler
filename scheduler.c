@@ -185,16 +185,18 @@ int main(int argc, char *argv[])
                 char line[100];
                 sprintf(line, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %d\n", getClk(), p_terminated_id, processes[p_terminated_id - 1].arrival_time, processes[p_terminated_id - 1].running_time, 0, processes[p_terminated_id - 1].waiting_time, TA, WTA);
                 strcat(LogStr, line);
+                running_pid = -1;
                 if (terminate_count == processes_count)
                 {
                     break;
                 }
             }
 
-            if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) // then check if there are no processes running
+            if (update && CPU_available && !isEmpty_PriorityQueue(&HPF_queue)) // then check if t    are no processes running
             {
                 int P_id;
                 P_id = HPF_queue.head->process.id;
+                running_pid = HPF_queue.head->process.pid;
                 HPF_queue.head->process.state = RUNNING;
                 HPF_queue.head->process.start_time = getClk();
                 HPF_queue.head->process.waiting_time = processes[P_id].waiting_time;
@@ -205,6 +207,10 @@ int main(int argc, char *argv[])
                 char line[100];
                 sprintf(line, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), P_id, processes[P_id].arrival_time, processes[P_id].running_time, processes[P_id].remaining_time, processes[P_id].waiting_time);
                 strcat(LogStr, line);
+            }
+            if(update && running_pid != -1)
+            {
+                kill(running_pid,SIGUSR2);
             }
 
             if(update && CPU_available)
@@ -240,7 +246,6 @@ int main(int argc, char *argv[])
                 int prev_pid = running_pid;
                 int prev_index = *index;
                 running_pid = ShortestRemaining(processes, Process_arrived, index);
-                printf("run pid %d\n",running_pid);
 
                 if (prev_pid != -1 && running_pid != prev_pid) // Stopped
                 {
@@ -280,7 +285,6 @@ int main(int argc, char *argv[])
                     kill(running_pid,SIGSTOP);
                     kill(running_pid,SIGUSR2);
                     kill(running_pid,SIGCONT);
-                    printf("here 281\n");
                 }
             }
         }
@@ -331,7 +335,6 @@ int main(int argc, char *argv[])
                     RR_current_quantum = quantum;
                     RR_current_process->process.start_time = getClk();
                     RR_current_process->process.state = RUNNING;
-                    kill(RR_current_process->process.pid, SIGCONT); // Started
                     printf("Process %d first run\n", RR_current_process->process.id);
 
                     char line[100];
@@ -341,7 +344,6 @@ int main(int argc, char *argv[])
                 else if (RR_current_quantum == 0 && RR_current_process) // Process has finished its allowed time
                 {
                     RR_current_process->process.state = READY;
-                    kill(RR_current_process->process.pid, SIGSTOP); // Stopped
                     printf("Process %d stoped\n", RR_current_process->process.id);
 
                     char line[100];
@@ -365,7 +367,6 @@ int main(int argc, char *argv[])
                         sprintf(line, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, RR_current_process->process.remaining_time, RR_current_process->process.waiting_time);
                         strcat(LogStr, line);
                     }
-                    kill(RR_current_process->process.pid, SIGCONT);
                     printf("process %d continue after a process stoped\n", RR_current_process->process.id);
                 }
                 else if (RR_current_process && RR_current_quantum == quantum) // process after terminated one
@@ -386,8 +387,13 @@ int main(int argc, char *argv[])
                         sprintf(line, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), RR_current_process->process.id, RR_current_process->process.arrival_time, RR_current_process->process.running_time, RR_current_process->process.remaining_time, RR_current_process->process.waiting_time);
                         strcat(LogStr, line);
                     }
-                    kill(RR_current_process->process.pid, SIGCONT);
                     printf("process %d continue after a process terminated\n", RR_current_process->process.id);
+                }
+
+                if (RR_current_process)
+                {
+                    printf("here389 %d\n",RR_current_process->process.pid);
+                    kill(RR_current_process->process.pid,SIGUSR2);
                 }
             }
         }

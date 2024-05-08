@@ -169,7 +169,6 @@ int main(int argc, char * argv[])
             else
             {
                 i ++;
-                printf("here172 %d", i);
             }
         }
     }

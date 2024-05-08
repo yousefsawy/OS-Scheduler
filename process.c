@@ -33,7 +33,6 @@ int main(int agrc, char * argv[])
         if(rem != remainingtime)
         {
             rem = remainingtime;
-            printf("here36 %d\n", getClk());
         }
     }
     kill(getppid(), SIGUSR1); //sends termination signal to scheduler in order to handle it
