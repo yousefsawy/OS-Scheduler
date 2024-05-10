@@ -150,6 +150,15 @@ BuddyNode* findBuddyNode(BuddyNode* node, void* block) {
     return findBuddyNode(node->right, block);
 }
 
+size_t getStartAddress(void* block) {
+    BuddyNode* node = findBuddyNode(globalAllocator.root, block);
+    return node->offset;
+}
+
+size_t getEndAddress(void* block) {
+    BuddyNode* node = findBuddyNode(globalAllocator.root, block);
+    return (node->offset + node->size - 1);
+}
 
 /**
  * @brief Deallocates memory previously allocated by the allocate function.
